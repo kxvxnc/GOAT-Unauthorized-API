@@ -35,17 +35,19 @@ async def lookup(selection, keywords, ctx):
         r = s.post("https://2fwotdvm2o-dsn.algolia.net/1/indexes/product_variants_v2/query", params=params, verify=False, data=byte_payload, timeout=30)
     results = r.json()["hits"][selection]
     generalAPI = f"https://www.goat.com/api/v1/product_templates/{results['slug']}/show_v2"
+    sellAPI = f"https://www.goat.com/api/v1/product_variants?productTemplateId={results['slug']}&shoeCondition=new_no_defects&boxCondition=good_condition"
     offerAPI = f"https://www.goat.com/api/v1/highest_offers?productTemplateId={results['id']}"
     general = requests.get(generalAPI, headers=header).json()
+    asks = requests.get(sellAPI, headers=header).json()
     bids = requests.get(offerAPI, headers=header).json()
     link = f"https://goat.com/sneakers/{results['slug']}"
 
     priceDict = {}
     for size in general['sizeOptions']:
             priceDict[float(size["value"])] = {"ask": 0, "bid": 0}
-    for ask in general['availableSizesNewV2']:
-        if ask[2] == "good_condition":
-            priceDict[float(ask[0])]["ask"] = ask[1][:-2]
+    for ask in asks:
+        if ask["size"] in priceDict:
+            priceDict[ask["size"]]["ask"] = str(ask["lowestPriceCents"]["amountUsdCents"])[:-2]
     for bid in bids:
         if bid["size"] in priceDict:
             priceDict[bid["size"]]["bid"] = str(bid["offerAmountCents"]["amountUsdCents"])[:-2]
